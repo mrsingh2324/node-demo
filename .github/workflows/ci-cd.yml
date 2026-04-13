@@ -19,16 +19,22 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
+      - name: Set up Docker
+        uses: docker/setup-docker@v4
+        with:
+          version: 'latest'
+          compose: true
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
 
       - name: Build Docker images
         run: |
-          docker-compose build
+          docker compose build
 
       - name: Start services
         run: |
-          docker-compose up -d
+          docker compose up -d
 
       - name: Wait for services to be ready
         run: |
@@ -42,7 +48,7 @@ jobs:
       - name: Stop services
         if: always()
         run: |
-          docker-compose down
+          docker compose down
 
   build-and-push:
     needs: test
