@@ -1,30 +1,62 @@
 version: '3.8'
+
 services:
   auth-service:
-    build:
-      context: ./auth-service
+    build: ./auth-service
+    container_name: auth-service
     ports:
       - '3001:3001'
     environment:
+      - NODE_ENV=production
       - PORT=3001
+      - JWT_SECRET=your-secret-key-change-in-production
+    networks:
+      - bookstore-network
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3001/health', (r) => { process.exit(r.statusCode === 200 ? 0 : 1) })"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   book-service:
-    build:
-      context: ./book-service
+    build: ./book-service
+    container_name: book-service
     ports:
       - '3002:3002'
     environment:
+      - NODE_ENV=production
       - PORT=3002
+    networks:
+      - bookstore-network
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3002/health', (r) => { process.exit(r.statusCode === 200 ? 0 : 1) })"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   api-gateway:
-    build:
-      context: ./api-gateway
+    build: ./api-gateway
+    container_name: api-gateway
     ports:
       - '3000:3000'
     environment:
+      - NODE_ENV=production
       - PORT=3000
-      - AUTH_URL=http://auth-service:3001
-      - BOOK_URL=http://book-service:3002
+      - AUTH_SERVICE_URL=http://auth-service:3001
+      - BOOK_SERVICE_URL=http://book-service:3002
+    networks:
+      - bookstore-network
     depends_on:
-      - auth-service
-      - book-service
+      auth-service:
+        condition: service_healthy
+      book-service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000/health', (r) => { process.exit(r.statusCode === 200 ? 0 : 1) })"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+networks:
+  bookstore-network:
+    driver: bridge
