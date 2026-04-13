@@ -1,0 +1,33 @@
+name: CI/CD
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: '20'
+      - name: Install service dependencies
+        run: |
+          cd auth-service && npm ci
+          cd ../book-service && npm ci
+          cd ../api-gateway && npm ci
+      - name: Build and start services
+        run: |
+          docker compose build
+          docker compose up -d
+      - name: Run integration test
+        run: |
+          chmod +x ./integration-test.sh
+          ./integration-test.sh
+      - name: Tear down services
+        if: always()
+        run: docker compose down
